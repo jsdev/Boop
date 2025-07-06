@@ -1,43 +1,88 @@
 import { useState } from 'preact/hooks'
-import preactLogo from './assets/preact.svg'
-import viteLogo from '/vite.svg'
+import { createGameState, makeMove } from './game'
 import './app.css'
 
 export function App() {
-  const [count, setCount] = useState(0)
-
+  const [gameState, setGameState] = useState(createGameState())
+  
+  const handleCellClick = (row, col) => {
+    if (gameState.gameOver || gameState.board[row][col] !== null) {
+      return
+    }
+    
+    // For now, always place kittens - we'll add piece selection later
+    const newState = makeMove(gameState, row, col, 'kitten')
+    setGameState(newState)
+  }
+  
+  const resetGame = () => {
+    setGameState(createGameState())
+  }
+  
+  const renderPiece = (piece) => {
+    if (!piece) return null
+    
+    const [type, player] = piece.split('_')
+    const isPlayer1 = player === 'player1'
+    
+    return (
+      <div className={`piece ${type} ${isPlayer1 ? 'player1' : 'player2'}`}>
+        {type === 'kitten' ? '🐱' : '🐈'}
+      </div>
+    )
+  }
+  
+  const currentPlayer = gameState.players[gameState.currentPlayer]
+  
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} class="logo" alt="Vite logo" />
-        </a>
-        <a href="https://preactjs.com" target="_blank">
-          <img src={preactLogo} class="logo preact" alt="Preact logo" />
-        </a>
+    <div className="app">
+      <header className="header">
+        <h1>🐱 Boop 🐈</h1>
+        <p>Strategic board game by Scott Brady</p>
+      </header>
+      
+      <div className="game-container">
+        <div className="game-info">
+          <div className="player-info">
+            <h3>Player {gameState.currentPlayer + 1}'s Turn</h3>
+            <div className="player-pieces">
+              <span>🐱 Kittens: {currentPlayer.kittens}</span>
+              <span>🐈 Cats: {currentPlayer.cats}</span>
+            </div>
+          </div>
+          
+          {gameState.gameOver && (
+            <div className="game-over">
+              <h2>🎉 {gameState.winner} Wins! 🎉</h2>
+              <button onClick={resetGame} className="reset-button">
+                Play Again
+              </button>
+            </div>
+          )}
+        </div>
+        
+        <div className="board">
+          {gameState.board.map((row, rowIndex) => (
+            <div key={rowIndex} className="board-row">
+              {row.map((cell, colIndex) => (
+                <div
+                  key={`${rowIndex}-${colIndex}`}
+                  className={`board-cell ${cell ? 'occupied' : 'empty'}`}
+                  onClick={() => handleCellClick(rowIndex, colIndex)}
+                >
+                  {renderPiece(cell)}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        
+        <div className="controls">
+          <button onClick={resetGame} className="reset-button">
+            Reset Game
+          </button>
+        </div>
       </div>
-      <h1>Vite + Preact</h1>
-      <div class="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/app.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p>
-        Check out{' '}
-        <a
-          href="https://preactjs.com/guide/v10/getting-started#create-a-vite-powered-preact-app"
-          target="_blank"
-        >
-          create-preact
-        </a>
-        , the official Preact + Vite starter
-      </p>
-      <p class="read-the-docs">
-        Click on the Vite and Preact logos to learn more
-      </p>
-    </>
+    </div>
   )
 }
