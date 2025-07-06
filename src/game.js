@@ -143,3 +143,101 @@ export const boop = (board, row, col) => {
 
   return newBoard;
 };
+
+export const checkWinCondition = (board, player) => {
+  const playerCatType = `cat_${player}`;
+  
+  // Check for 3 cats in a row
+  const catLines = detectLines(board, playerCatType);
+  if (catLines.length > 0) {
+    return player;
+  }
+  
+  // Check for 8 cats on board
+  let catCount = 0;
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      if (board[row][col] === playerCatType) {
+        catCount++;
+      }
+    }
+  }
+  
+  if (catCount >= 8) {
+    return player;
+  }
+  
+  return null;
+};
+
+export const createGameState = () => {
+  return {
+    board: createBoard(),
+    currentPlayer: 0,
+    players: [
+      { color: 'player1', kittens: 8, cats: 0 },
+      { color: 'player2', kittens: 8, cats: 0 }
+    ],
+    winner: null,
+    gameOver: false
+  };
+};
+
+export const makeMove = (gameState, row, col, pieceType) => {
+  // Validate move
+  if (gameState.board[row][col] !== null) {
+    return gameState; // Invalid move, return unchanged state
+  }
+  
+  const currentPlayer = gameState.players[gameState.currentPlayer];
+  const playerColor = currentPlayer.color;
+  const fullPieceType = `${pieceType}_${playerColor}`;
+  
+  // Check if player has the piece available
+  if (pieceType === 'kitten' && currentPlayer.kittens <= 0) {
+    return gameState;
+  }
+  if (pieceType === 'cat' && currentPlayer.cats <= 0) {
+    return gameState;
+  }
+  
+  // Create new game state
+  const newState = {
+    ...gameState,
+    board: placePiece(gameState.board, row, col, fullPieceType),
+    players: gameState.players.map((player, index) => {
+      if (index === gameState.currentPlayer) {
+        return {
+          ...player,
+          kittens: pieceType === 'kitten' ? player.kittens - 1 : player.kittens,
+          cats: pieceType === 'cat' ? player.cats - 1 : player.cats
+        };
+      }
+      return player;
+    })
+  };
+  
+  // Apply boop mechanics
+  newState.board = boop(newState.board, row, col);
+  
+  // Check for line formation and graduation
+  const kittenType = `kitten_${playerColor}`;
+  const lines = detectLines(newState.board, kittenType);
+  if (lines.length > 0) {
+    const { newBoard, graduatedCount } = graduateKittens(newState.board, lines);
+    newState.board = newBoard;
+    newState.players[gameState.currentPlayer].cats += graduatedCount;
+  }
+  
+  // Check win condition
+  const winner = checkWinCondition(newState.board, playerColor);
+  if (winner) {
+    newState.winner = winner;
+    newState.gameOver = true;
+  }
+  
+  // Switch players
+  newState.currentPlayer = (gameState.currentPlayer + 1) % 2;
+  
+  return newState;
+};

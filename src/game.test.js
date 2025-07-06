@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createBoard, placePiece, detectLines, graduateKittens, boop } from './game';
+import { createBoard, placePiece, detectLines, graduateKittens, boop, checkWinCondition, createGameState, makeMove } from './game';
 
 describe('game board', () => {
   it('should create a 6x6 board', () => {
@@ -140,5 +140,71 @@ describe('boop mechanics', () => {
     const newBoard = boop(board, 0, 0);
     expect(newBoard[0][1]).toBe('kitten');
     expect(newBoard[0][2]).toBe('kitten');
+  });
+});
+
+describe('win conditions', () => {
+  it('should detect win when player has 3 cats in a row', () => {
+    let board = createBoard();
+    board = placePiece(board, 0, 0, 'cat_player1');
+    board = placePiece(board, 0, 1, 'cat_player1');
+    board = placePiece(board, 0, 2, 'cat_player1');
+    
+    const winner = checkWinCondition(board, 'player1');
+    expect(winner).toBe('player1');
+  });
+
+  it('should not detect win with mixed piece types', () => {
+    let board = createBoard();
+    board = placePiece(board, 0, 0, 'cat_player1');
+    board = placePiece(board, 0, 1, 'kitten_player1');
+    board = placePiece(board, 0, 2, 'cat_player1');
+    
+    const winner = checkWinCondition(board, 'player1');
+    expect(winner).toBeNull();
+  });
+
+  it('should detect win with 8 cats on board', () => {
+    let board = createBoard();
+    // Place 8 cats for player1
+    const positions = [[0,0], [0,1], [0,2], [0,3], [1,0], [1,1], [1,2], [1,3]];
+    positions.forEach(([row, col]) => {
+      board = placePiece(board, row, col, 'cat_player1');
+    });
+    
+    const winner = checkWinCondition(board, 'player1');
+    expect(winner).toBe('player1');
+  });
+});
+
+describe('game state management', () => {
+  it('should create initial game state', () => {
+    const gameState = createGameState();
+    
+    expect(gameState.currentPlayer).toBe(0);
+    expect(gameState.players[0].kittens).toBe(8);
+    expect(gameState.players[0].cats).toBe(0);
+    expect(gameState.players[1].kittens).toBe(8);
+    expect(gameState.players[1].cats).toBe(0);
+    expect(gameState.winner).toBeNull();
+    expect(gameState.gameOver).toBe(false);
+  });
+
+  it('should make a valid move and switch players', () => {
+    const gameState = createGameState();
+    const newState = makeMove(gameState, 0, 0, 'kitten');
+    
+    expect(newState.board[0][0]).toBe('kitten_player1');
+    expect(newState.currentPlayer).toBe(1);
+    expect(newState.players[0].kittens).toBe(7);
+  });
+
+  it('should reject invalid moves', () => {
+    const gameState = createGameState();
+    let newState = makeMove(gameState, 0, 0, 'kitten');
+    // Try to place on occupied space
+    newState = makeMove(newState, 0, 0, 'kitten');
+    
+    expect(newState.currentPlayer).toBe(1); // Should still be player 2's turn
   });
 });
