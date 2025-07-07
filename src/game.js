@@ -92,11 +92,16 @@ export const detectLines = (board, pieceType) => {
 export const graduateKittens = (board, lines) => {
   let graduatedCount = 0;
   const newBoard = board.map((r) => [...r]);
+  const graduatedSet = new Set();
 
   lines.forEach((line) => {
-    graduatedCount++;
     line.forEach((pos) => {
-      newBoard[pos.row][pos.col] = null;
+      const key = `${pos.row},${pos.col}`;
+      if (!graduatedSet.has(key)) {
+        graduatedSet.add(key);
+        newBoard[pos.row][pos.col] = null;
+        graduatedCount++;
+      }
     });
   });
 

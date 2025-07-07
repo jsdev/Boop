@@ -110,7 +110,7 @@ describe("kitten graduation", () => {
     const lines = detectLines(board, "kitten");
     const { newBoard, graduatedCount } = graduateKittens(board, lines);
 
-    expect(graduatedCount).toBe(1);
+    expect(graduatedCount).toBe(3); // 3 kittens in the line, so 3 cats
     expect(newBoard[0][0]).toBeNull();
     expect(newBoard[0][1]).toBeNull();
     expect(newBoard[0][2]).toBeNull();
@@ -265,26 +265,10 @@ describe("game state management", () => {
     gameState.board[2][1] = "kitten_player1";
     // Now if we place at (2,2), we'll have a horizontal line that won't be booped
 
-    console.log("Before final move:");
-    console.log(
-      "Full board:",
-      gameState.board.map((row) => row.slice()),
-    );
-    console.log("Current player:", gameState.currentPlayer);
-    console.log("Player 0 cats:", gameState.players[0].cats);
-
     // Place the final kitten to complete the line
     const newState = makeMove(gameState, 2, 2, "kitten");
 
-    console.log("After final move:");
-    console.log(
-      "Full board:",
-      newState.board.map((row) => row.slice()),
-    );
-    console.log("Player 0 cats:", newState.players[0].cats);
-    console.log("Player 1 cats:", newState.players[1].cats);
-
-    expect(newState.players[0].cats).toBe(1);
+    expect(newState.players[0].cats).toBe(3); // 3 kittens graduated
     expect(newState.board[2][0]).toBeNull();
     expect(newState.board[2][1]).toBeNull();
     expect(newState.board[2][2]).toBeNull();
@@ -518,7 +502,7 @@ describe("additional comprehensive tests", () => {
     expect(lines.length).toBe(1);
 
     const { newBoard, graduatedCount } = graduateKittens(board, lines);
-    expect(graduatedCount).toBe(1); // One set of 3 kittens = 1 cat
+    expect(graduatedCount).toBe(3); // 3 kittens in the line
     expect(newBoard[0][0]).toBeNull();
     expect(newBoard[0][1]).toBeNull();
     expect(newBoard[0][2]).toBeNull();
@@ -617,7 +601,7 @@ describe("additional comprehensive tests", () => {
       }
     }
 
-    expect(graduationCount).toBe(8); // Should have graduated 8 times
+    expect(graduationCount).toBe(24); // 8 lines of 3 kittens each = 24 cats
   });
 
   it("should handle complex boop scenarios with mixed piece types (no removals)", () => {
@@ -679,7 +663,7 @@ describe("comprehensive edge case testing", () => {
     expect(lines.length).toBe(2); // Should detect both lines
 
     const { newBoard, graduatedCount } = graduateKittens(board, lines);
-    expect(graduatedCount).toBe(2); // Two sets of 3 kittens = 2 cats
+    expect(graduatedCount).toBe(6); // 2 lines of 3 kittens each
   });
 
   it("should handle complex board state with mixed pieces", () => {
@@ -749,13 +733,12 @@ describe("graduation after boop", () => {
     let newState = makeMove(gameState, 2, 1, "kitten");
     // Graduation should occur for player 1
     const cats = newState.players[0].cats;
-    expect(cats).toBe(1);
+    expect(cats).toBe(3); // 3 kittens in the line
     // The line should be cleared
     expect(newState.board[2][2]).toBeNull();
     expect(newState.board[2][3]).toBeNull();
     expect(newState.board[2][4]).toBeNull();
   });
-
   it("should graduate kittens for opponent if boop creates their line", () => {
     // Player 2 sets up two kittens in a row
     let gameState = createGameState();
@@ -767,10 +750,46 @@ describe("graduation after boop", () => {
     let newState = makeMove(gameState, 3, 1, "kitten");
     // Graduation should occur for player 2
     const cats = newState.players[1].cats;
-    expect(cats).toBe(1);
+    expect(cats).toBe(3); // 3 kittens in the line
     // The line should be cleared
     expect(newState.board[3][2]).toBeNull();
     expect(newState.board[3][3]).toBeNull();
     expect(newState.board[3][4]).toBeNull();
+  });
+});
+
+describe("graduation after boop with overlapping lines", () => {
+  it("should graduate kittens for overlapping lines (shared kitten) after boop, awarding correct number of cats", () => {
+    // Board before move (player1 = X, . = empty):
+    // [ .  .  .  .  .  . ]
+    // [ .  .  .  .  .  . ]
+    // [ .  X  X  X  .  . ]
+    // [ .  X  .  .  .  . ]
+    // [ .  .  .  .  .  . ]
+    // [ .  .  .  .  .  . ]
+    // Player 1 places at (2,3), which boops (2,2) to (2,1), forming three lines:
+    // Horizontal: (2,0)-(2,1)-(2,2)
+    // Horizontal: (2,1)-(2,2)-(2,3)
+    // Vertical:   (1,1)-(2,1)-(3,1)
+    // The kittens at (2,1) and (2,2) are shared between lines, so only 6 unique kittens graduate.
+
+    let board = createBoard();
+    board = placePiece(board, 2, 0, "kitten_player1"); // (2,0)
+    board = placePiece(board, 2, 1, "kitten_player1"); // (2,1)
+    board = placePiece(board, 2, 2, "kitten_player1"); // (2,2)
+    board = placePiece(board, 3, 1, "kitten_player1"); // (3,1)
+    board = placePiece(board, 1, 1, "kitten_player1"); // (1,1)
+    board = placePiece(board, 2, 3, "kitten_player1"); // (2,3)
+    board = boop(board, 2, 3);
+
+    const lines = detectLines(board, "kitten_player1");
+    const { newBoard, graduatedCount } = graduateKittens(board, lines);
+    expect(graduatedCount).toBe(6);
+    expect(newBoard[2][0]).toBeNull();
+    expect(newBoard[2][1]).toBeNull();
+    expect(newBoard[2][2]).toBeNull();
+    expect(newBoard[2][3]).toBeNull();
+    expect(newBoard[1][1]).toBeNull();
+    expect(newBoard[3][1]).toBeNull();
   });
 });
