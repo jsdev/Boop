@@ -1,6 +1,10 @@
 import { useState, useCallback } from "preact/hooks";
 import { createGameState, makeMove } from "./game";
 import "./app.css";
+import kitten1 from "./assets/kitten_1.png";
+import kitten2 from "./assets/kitten_2.png";
+import cat1 from "./assets/cat_1.png";
+import cat2 from "./assets/cat_2.png";
 
 export function App() {
   const [gameState, setGameState] = useState(createGameState());
@@ -107,13 +111,17 @@ export function App() {
 
   const renderPiece = (piece) => {
     if (!piece) return null;
-
     const [type, player] = piece.split("_");
     const isPlayer1 = player === "player1";
-
+    let imgSrc = null;
+    if (type === "kitten") {
+      imgSrc = isPlayer1 ? kitten1 : kitten2;
+    } else if (type === "cat") {
+      imgSrc = isPlayer1 ? cat1 : cat2;
+    }
     return (
       <div className={`piece ${type} ${isPlayer1 ? "player1" : "player2"}`}>
-        {type === "kitten" ? "🐱" : "🐈"}
+        <img src={imgSrc} alt={`${type} ${player}`} className="piece-img" />
       </div>
     );
   };
@@ -157,7 +165,17 @@ export function App() {
                     onDragStart={handleKittenDragStart}
                     data-testid="kitten-selector"
                   >
-                    <div className="piece-display">🐱</div>
+                    <div className="piece-display">
+                      <img
+                        src={
+                          currentPlayer.color === "player1"
+                            ? kitten1
+                            : kitten2
+                        }
+                        alt="Kitten"
+                        className="piece-img"
+                      />
+                    </div>
                     <span>Kitten ({currentPlayer.kittens})</span>
                   </button>
                 )}
@@ -173,7 +191,13 @@ export function App() {
                     onDragStart={handleCatDragStart}
                     data-testid="cat-selector"
                   >
-                    <div className="piece-display">🐈</div>
+                    <div className="piece-display">
+                      <img
+                        src={currentPlayer.color === "player1" ? cat1 : cat2}
+                        alt="Cat"
+                        className="piece-img"
+                      />
+                    </div>
                     <span>Cat ({currentPlayer.cats})</span>
                   </button>
                 )}

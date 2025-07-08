@@ -3,6 +3,7 @@ import preact from "@preact/preset-vite";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: "/Boop/",
   plugins: [preact()],
   test: {
     environment: "jsdom",
