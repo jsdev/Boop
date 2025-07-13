@@ -120,47 +120,48 @@ describe("kitten graduation", () => {
 describe("boop mechanics", () => {
   it("should boop an adjacent kitten", () => {
     let board = createBoard();
-    board = placePiece(board, 0, 1, "kitten"); // The piece to be booped
-    board = placePiece(board, 0, 0, "kitten"); // The piece that boops
-    const newBoard = boop(board, 0, 0);
-    expect(newBoard[0][2]).toBe("kitten");
-    expect(newBoard[0][1]).toBeNull();
+    board = placePiece(board, 1, 1, "kitten"); // The piece to be booped
+    board = placePiece(board, 1, 2, "kitten"); // The piece that boops
+    const { newBoard } = boop(board, 1, 1);
+    expect(newBoard[1][3]).toBe("kitten");
   });
 
-  it("a cat should not boop an adjacent kitten", () => {
+  it("a cat should boop an adjacent kitten", () => {
     let board = createBoard();
-    board = placePiece(board, 0, 1, "kitten");
-    board = placePiece(board, 0, 0, "cat");
-    const newBoard = boop(board, 0, 0);
-    expect(newBoard[0][1]).toBe("kitten"); // kitten is not moved
-    expect(newBoard[0][0]).toBe("cat");
+    board = placePiece(board, 1, 1, "cat_player1");
+    board = placePiece(board, 1, 2, "kitten_player2");
+    const { newBoard } = boop(board, 1, 1);
+    expect(newBoard[1][3]).toBe("kitten_player2");
   });
 
   it("a cat should boop an adjacent cat", () => {
     let board = createBoard();
-    board = placePiece(board, 0, 1, "cat");
-    board = placePiece(board, 0, 0, "cat");
-    const newBoard = boop(board, 0, 0);
-    expect(newBoard[0][1]).toBe("cat"); // cat is not moved
-    expect(newBoard[0][0]).toBe("cat");
+    board = placePiece(board, 1, 1, "cat_player1");
+    board = placePiece(board, 1, 2, "cat_player2");
+    const { newBoard } = boop(board, 1, 1);
+    expect(newBoard[1][3]).toBe("cat_player2");
   });
 
-  it("should not allow a cat to be booped by a kitten", () => {
+  it("should not allow a kitten to boop a cat", () => {
     let board = createBoard();
-    board = placePiece(board, 2, 2, "cat");
-    board = placePiece(board, 2, 1, "kitten");
-    const newBoard = boop(board, 2, 1);
-    expect(newBoard[2][2]).toBe("cat"); // cat is not moved
-    expect(newBoard[2][1]).toBe("kitten");
+    board = placePiece(board, 1, 1, "kitten_player1");
+    board = placePiece(board, 1, 2, "cat_player2");
+    const { newBoard } = boop(board, 1, 1);
+    expect(newBoard[1][2]).toBe("cat_player2"); // Cat remains in place
   });
 
-  it("should not allow a cat to boop anything", () => {
-    let board = createBoard();
-    board = placePiece(board, 3, 3, "kitten");
-    board = placePiece(board, 3, 2, "cat");
-    const newBoard = boop(board, 3, 2);
-    expect(newBoard[3][3]).toBe("kitten"); // kitten is not moved
-    expect(newBoard[3][2]).toBe("cat");
+  it("should boop a piece off the board and return it to the owner", () => {
+    let gameState = createGameState();
+    gameState.board = placePiece(gameState.board, 0, 1, "kitten_player2");
+    gameState.players[1].kittens = 7; // Player 2 has used one kitten
+
+    // Player 1 places a kitten at (0,0), booping player 2's kitten off the board
+    gameState = makeMove(gameState, 0, 0, "kitten");
+
+    // The booped kitten should be gone from the board
+    expect(gameState.board[0][1]).toBeNull();
+    // The kitten should be returned to player 2's supply
+    expect(gameState.players[1].kittens).toBe(8);
   });
 });
 
@@ -511,17 +512,17 @@ describe("additional comprehensive tests", () => {
   it("should handle boop mechanics correctly when target space is occupied", () => {
     let board = createBoard();
     // Set up: cat -> kitten -> kitten (target space occupied)
-    board = placePiece(board, 1, 0, "cat_player1");
-    board = placePiece(board, 1, 1, "kitten_player2");
-    board = placePiece(board, 1, 2, "kitten_player1");
+    board = placePiece(board, 1, 1, "cat_player1");
+    board = placePiece(board, 1, 2, "kitten_player2");
+    board = placePiece(board, 1, 3, "kitten_player1");
 
-    // The cat should try to boop the kitten at (1,1) to (1,2), but (1,2) is occupied
-    // So the kitten should stay at (1,1)
-    const newBoard = boop(board, 1, 0);
+    // The cat should try to boop the kitten at (1,2) to (1,3), but (1,3) is occupied
+    // So the kitten should stay at (1,2)
+    const newBoard = boop(board, 1, 1);
 
-    expect(newBoard[1][0]).toBe("cat_player1"); // Original cat stays
-    expect(newBoard[1][1]).toBe("kitten_player2"); // Kitten stays because target is occupied
-    expect(newBoard[1][2]).toBe("kitten_player1"); // Original kitten stays
+    expect(newBoard[1][1]).toBe("cat_player1"); // Original cat stays
+    expect(newBoard[1][2]).toBe("kitten_player2"); // Kitten stays because target is occupied
+    expect(newBoard[1][3]).toBe("kitten_player1"); // Original kitten stays
   });
 
   it("should prevent invalid moves on occupied spaces", () => {

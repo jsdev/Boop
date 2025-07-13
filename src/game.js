@@ -110,16 +110,17 @@ export const graduateKittens = (board, lines) => {
 
 export const boop = (board, row, col) => {
   const newBoard = board.map((r) => [...r]);
+  const boopedOffPieces = [];
 
   // Handle invalid coordinates
   if (row < 0 || row >= ROWS || col < 0 || col >= COLS) {
-    return newBoard;
+    return { newBoard, boopedOffPieces };
   }
 
   const boopingPiece = newBoard[row][col];
 
   if (!boopingPiece) {
-    return newBoard;
+    return { newBoard, boopedOffPieces };
   }
 
   const directions = [
@@ -150,12 +151,9 @@ export const boop = (board, row, col) => {
       const boopingType = boopingPiece.split("_")[0];
       const boopedType = boopedPiece.split("_")[0];
 
-      // A kitten can't boop a cat, and cats can't be booped at all
-      if (boopingType === 'kitten' && boopedType === 'cat') {
-        return;
-      }
-      if (boopingType === 'cat') {
-        return; // Cats can't boop anything
+      // A kitten can't boop a cat
+      if (boopingType === "kitten" && boopedType === "cat") {
+        return; // Invalid boop, do nothing
       }
 
       // Check for group immunity (2+ pieces in a row in the same direction)
@@ -176,14 +174,15 @@ export const boop = (board, row, col) => {
       const boopToRow = adjacentRow + dRow;
       const boopToCol = adjacentCol + dCol;
 
-      // If boop would move off the board, do nothing (piece stays in place)
+      // If boop would move off the board, return piece to owner
       if (
         boopToRow < 0 ||
         boopToRow >= ROWS ||
         boopToCol < 0 ||
         boopToCol >= COLS
       ) {
-        // Piece stays in place, do not set to null
+        boopedOffPieces.push(boopedPiece);
+        newBoard[adjacentRow][adjacentCol] = null;
         return;
       }
 
@@ -192,11 +191,11 @@ export const boop = (board, row, col) => {
         newBoard[boopToRow][boopToCol] = boopedPiece;
         newBoard[adjacentRow][adjacentCol] = null;
       }
-      // else: do nothing, piece stays put
+      // else: do nothing, piece stays put because destination is blocked
     }
   });
 
-  return newBoard;
+  return { newBoard, boopedOffPieces };
 };
 
 export const checkWinCondition = (board, player) => {
@@ -275,8 +274,34 @@ export const makeMove = (gameState, row, col, pieceType) => {
     }),
   };
 
-  // Apply boop mechanics FIRST (immediate effect of placing the piece)
-  newState.board = boop(newState.board, row, col);
+  // Apply boop mechanics FIRST
+  const { newBoard: boopedBoard, boopedOffPieces } = boop(
+    newState.board,
+    row,
+    col,
+  );
+  newState.board = boopedBoard;
+
+  // Return booped-off pieces to their owners
+  if (boopedOffPieces.length > 0) {
+    boopedOffPieces.forEach((piece) => {
+      const [type, playerColor] = piece.split("_");
+      const ownerIndex = newState.players.findIndex(
+        (p) => p.color === playerColor,
+      );
+      if (ownerIndex !== -1) {
+        const playerToUpdate = newState.players[ownerIndex];
+        newState.players[ownerIndex] = {
+          ...playerToUpdate,
+          kittens:
+            type === "kitten"
+              ? playerToUpdate.kittens + 1
+              : playerToUpdate.kittens,
+          cats: type === "cat" ? playerToUpdate.cats + 1 : playerToUpdate.cats,
+        };
+      }
+    });
+  }
 
   // Check for line formation and graduation AFTER boop mechanics
   const kittenType = `kitten_${playerColor}`;
